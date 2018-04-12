@@ -1,0 +1,33 @@
+from sqlalchemy import create_engine
+import pandas as pd
+import numpy as np
+import COLLECTIONS as cln
+import html5lib
+import datetime as dt
+import pickle
+from collections import Counter
+
+cnx = create_engine('postgresql://%s:%s@localhost:%s/%s' % (cln.username, 
+                                                            cln.password, 
+                                                            cln.port,
+                                                            cln.db_name))
+
+query = """SELECT "FlightDate", "Carrier", "Origin", "Dest", "Obsv_Type",
+				   AVG("Obsv_Value") AS "Obsv_Val_A",
+				   MIN("Obsv_Value") AS "Obsv_Val_B",
+				   AVG("Latitude") AS "Lat",
+				   AVG("Longitude") AS "Long",
+				   AVG("Altitude") AS "Alt",
+				   COUNT(*) AS "Num_Flights", 
+				   SUM("ArrDel15") AS "Num_ArrDelays", 
+				   SUM("DepDel15") AS "Num_DepDelays"
+			FROM ontimeperformance
+			JOIN airports ON airports."IATA" = ontimeperformance."Origin"
+			JOIN weatherairportlinks ON weatherairportlinks."IATA" = ontimeperformance."Origin"
+			JOIN weather ON weather."StationID" = weatherairportlinks."StationID" AND
+							weather."Date" = ontimeperformance."FlightDate"
+			GROUP BY "FlightDate", "Carrier", "Origin", "Dest", "Obsv_Type";"""
+
+df = pd.read_sql_query(query, cnx)
+
+df.to_csv("Flight_Delays_OriginWeather.csv")
